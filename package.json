@@ -1,0 +1,17 @@
+{
+  "name": "fluentjs",
+  "version": "0.1.0",
+  "description": "Fluent for JS",
+  "main": "fluent.js",
+  "scripts": {
+    "test": "./node_modules/.bin/jasmine-node --verbose --junitreport spec"
+  },
+  "author": "Terrence Howard <chemisus@gmail.com>",
+  "license": "ISC",
+  "devDependencies": {
+    "jasmine": "^2.3.1",
+    "jasmine-node": "^1.14.5"
+  },
+  "dependencies": {
+  }
+}
