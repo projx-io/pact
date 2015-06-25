@@ -1,80 +1,120 @@
-var Publisher = require('./GuardedPublisher.js');
-var prototype = {};
-var exported = Object.create(prototype);
+var exported = {};
 module.exports = exported;
 
-var states = {
-    resolvable: true,
-    rejectable: true
+exported.make = function () {
+    return this.makeRoot();
 };
 
-exported.make = function (callback, key) {
+exported.makeRoot = function () {
     var promise = Object.create(this);
-    promise.status = 0;
-    promise.result = null;
-    promise.callback = key ? callback[key].bind(callback) : callback;
-    promise.thens = Publisher.make(true);
-    promise.catches = Publisher.make(true);
-    promise.finals = Publisher.make(true);
+    promise.root = promise;
+    promise.children = [];
+    promise.branch = promise;
+    promise.types = true;
     return promise;
 };
 
-exported.then = function (callback, key) {
-    var next = this.make(callback, key);
-    this.thens.subscribe(next, 'resolve');
-    if (this.status > 0) {
-        next.resolve.apply(next, this.result);
-    }
-    return next;
+exported.makeBranch = function (callback, types) {
+    var promise = Object.create(this.branch);
+    promise.callback = callback;
+    promise.children = [];
+    promise.branch = promise;
+    promise.types = types || [];
+    this.children.push(promise);
+    return promise;
 };
 
-exported.catch = function (callback, key) {
-    var next = this.make(callback, key);
-    this.catches.subscribe(next, 'reject');
-    if (this.status < 0) {
-        next.reject.apply(next, this.result);
-    }
-    return next;
+exported.makeNode = function (callback, types) {
+    var promise = Object.create(this);
+    promise.callback = callback;
+    promise.children = [];
+    promise.branch = this.branch;
+    this.children.push(promise);
+    return promise;
 };
 
-exported.finally = function (callback, key) {
-    var next = this.make(callback, key);
-    this.thens.subscribe(next, 'resolve');
-    this.catches.subscribe(next, 'reject');
-    if (this.status > 0) {
-        next.resolve.apply(next, this.result);
+exported.run = function (type) {
+    if (this.types === true || this.types.indexOf(type) >= 0) {
+        if (typeof this.callback === "function") {
+            this.result = this.callback.apply(null, this.result);
+        }
     }
-    if (this.status < 0) {
-        next.reject.apply(next, this.result);
-    }
-    return next;
+
+    this.children.map(function (child) {
+        child.run(type);
+    }.bind(this));
+
+    return this.result;
 };
 
-exported.execute = function (args) {
-    if (typeof this.callback === "function") {
-        return this.callback.apply(null, args);
-    }
+exported.addType = function (key, events, blocks) {
+    blocks = blocks || [];
 
-    return args;
-};
+    this[key] = function () {
+        this.root.result = arguments;
 
-exported.publish = function (publishers, parameters, pre, post) {
-    if (!this.status) {
-        this.status = pre;
-        this.result = this.execute(parameters);
-        publishers.map(function (publisher) {
-            this[publisher].publish.apply(this[publisher], this.result);
+        events.map(function (event) {
+            this.root.run(event);
         }.bind(this));
-        this.status = post;
-    }
 
-    return this.status === post ? this.result : null;
+        blocks.map(function (block) {
+            this.root[block] = function () {
+                return this.result;
+            };
+        }.bind(this));
+    };
 };
 
-exported.resolve = function () {
-    return this.publish(['thens', 'finals'], arguments, 1, 2);
+exported.addBranch = function (key, types) {
+    this[key] = function (callback) {
+        return this.makeBranch(callback, types);
+    };
 };
 
-exported.reject = function () {
-    return this.publish(['catches', 'finals'], arguments, -1, -2);
+exported.addNode = function (key, callback) {
+    this[key] = callback;
 };
+
+exported.addType('resolve', ['resolve.start', 'resolve.finish'], ['resolve', 'reject', 'notify']);
+exported.addType('reject', ['reject.start', 'reject.finish'], ['resolve', 'reject', 'notify']);
+exported.addType('notify', ['notify'], []);
+
+exported.addBranch('then', ['resolve.start']);
+exported.addBranch('catch', ['reject.start']);
+exported.addBranch('finally', ['resolve.finish', 'reject.finish']);
+exported.addBranch('notice', ['notify']);
+
+exported.addNode('also', function (callback) {
+    return this.makeNode(callback);
+});
+
+exported.addNode('with', function () {
+    var keys = arguments;
+    return this.makeNode(function (object) {
+        for (var i in keys) {
+            object = object[keys[i]];
+        }
+        return [object];
+    });
+});
+
+exported.addNode('expect', function (expected) {
+    return this.makeNode(function (actual) {
+        expect(actual).toBe(expected);
+        return actual;
+    });
+});
+
+exported.addNode('debug', function (message) {
+    return this.makeNode(function () {
+        console.log(message, '>>', arguments);
+        return arguments;
+    });
+});
+
+exported.addNode('stringify', function () {
+    return this.makeNode(function (value) {
+        return [JSON.stringify(value)];
+    });
+});
+
