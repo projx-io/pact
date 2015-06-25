@@ -65,13 +65,16 @@ describe('', function () {
     promise.catch(test('z'), 'on');
     promise.finally(test('x'), 'on');
 
-    promise.resolve('hey')
-    promise.reject('hey')
-    promise.resolve('hey')
-    promise.resolve('hey')
-    promise.resolve('hey')
-    promise.resolve('hey')
-    promise.resolve('hey')
+    setTimeout(function() {
+        promise.resolve('hey')
+    }, 1000);
+
+
+    setTimeout(function() {
+        promise.then(test('hahaha'), 'on');
+    }, 2000);
+
+
 
 
 });

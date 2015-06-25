@@ -30,20 +30,27 @@ var Promise = {
     then: function (callback, key) {
         var next = this.make(callback, key);
         this.thens.subscribe(next, 'resolve');
+        if (this.status > 0) {
+            next.resolve.apply(next, this.result);
+        }
         return next;
     },
     catch: function (callback, key) {
         var next = this.make(callback, key);
         this.catches.subscribe(next, 'reject');
+        if (this.status < 0) {
+            next.reject.apply(next, this.result);
+        }
         return next;
     },
     finally: function (callback, key) {
         var next = this.make(callback, key);
         this.thens.subscribe(next, 'resolve');
         this.catches.subscribe(next, 'reject');
+        if (this.status !== 0) {
+            next.resolve.apply(next, this.result);
+        }
         return next;
-    },
-    next: function (publisher, callback, key) {
     },
     execute: function (args) {
         if (typeof this.callback === "function") {
@@ -68,7 +75,7 @@ var Promise = {
         return this.publish(['thens', 'finals'], arguments, 1, 2);
     },
     reject: function () {
-        return this.publish(['thens', 'finals'], arguments, -1, -2);
+        return this.publish(['catches', 'finals'], arguments, -1, -2);
     }
 };
 
