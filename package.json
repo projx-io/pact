@@ -13,5 +13,6 @@
     "jasmine-node": "^1.14.5"
   },
   "dependencies": {
+    "bower": "^1.4.1"
   }
 }

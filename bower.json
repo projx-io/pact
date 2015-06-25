@@ -1,0 +1,13 @@
+{
+  "name": "pact",
+  "version": "0.1.0",
+  "description": "JS Promise",
+  "main": "pact.js",
+  "keywords": [
+    "promise"
+  ],
+  "authors": [
+    "Terrence Howard <chemisus@gmail.com>"
+  ],
+  "license": "MIT"
+}

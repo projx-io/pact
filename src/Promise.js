@@ -1,11 +1,32 @@
-var exported = {};
-module.exports = exported;
+var PromisePrototype = {};
+var Promise = Object.create(PromisePrototype);
+var PromiseTest = Object.create(Promise);
 
-exported.make = function () {
+module.exports = {
+    PromisePrototype: PromisePrototype,
+    Promise: Promise,
+    PromiseTest: PromiseTest
+};
+
+/**
+ * Make a promise. Now try and keep it!
+ *
+ * This is just a factory method that actually calls and returns .makeRoot()
+ *
+ * @returns {Promise}
+ */
+PromisePrototype.make = function () {
     return this.makeRoot();
 };
 
-exported.makeRoot = function () {
+/**
+ * Makes a root node.
+ *
+ * A root node is considered a major node.
+ *
+ * @returns {Promise}
+ */
+PromisePrototype.makeRoot = function () {
     var promise = Object.create(this);
     promise.root = promise;
     promise.children = [];
@@ -14,7 +35,20 @@ exported.makeRoot = function () {
     return promise;
 };
 
-exported.makeBranch = function (callback, events) {
+/**
+ * Makes a branch node.
+ *
+ * A branch node is considered a major node.
+ *
+ * When a branch invokes its callback, it will only use the result from the previous major node in the chain.
+ *
+ * If this method is called on a twig promise, the newly created branch promise will only use the result from branch
+ *
+ * @param callback
+ * @param events
+ * @returns {Promise}
+ */
+PromisePrototype.makeBranch = function (callback, events) {
     var promise = Object.create(this.branch);
     promise.callback = callback;
     promise.children = [];
@@ -24,7 +58,14 @@ exported.makeBranch = function (callback, events) {
     return promise;
 };
 
-exported.makeNode = function (callback, events) {
+/**
+ * Makes a twig promise.
+ *
+ * @param {Function} callback
+ * @param {String[]} events
+ * @returns {Promise}
+ */
+PromisePrototype.makeTwig = function (callback, events) {
     var promise = Object.create(this);
     promise.callback = callback;
     promise.children = [];
@@ -33,7 +74,13 @@ exported.makeNode = function (callback, events) {
     return promise;
 };
 
-exported.run = function (event) {
+/**
+ * Runs an event through the current node and its children.
+ *
+ * @param {String} event
+ * @returns {*}
+ */
+PromisePrototype.traverse = function (event) {
     if (this.events === true || this.events.indexOf(event) >= 0) {
         if (typeof this.callback === "function") {
             this.result = this.callback.apply(null, this.result);
@@ -41,20 +88,20 @@ exported.run = function (event) {
     }
 
     this.children.map(function (child) {
-        child.run(event);
+        child.traverse(event);
     }.bind(this));
 
     return this.result;
 };
 
-exported.addEvent = function (key, events, blocks) {
+PromisePrototype.addEvent = function (key, events, blocks) {
     blocks = blocks || [];
 
     this[key] = function () {
         this.root.result = arguments;
 
         events.map(function (event) {
-            this.root.run(event);
+            this.root.traverse(event);
         }.bind(this));
 
         blocks.map(function (block) {
@@ -65,55 +112,64 @@ exported.addEvent = function (key, events, blocks) {
     };
 };
 
-exported.addBranch = function (key, events) {
-    this[key] = function (callback) {
-        return this.makeBranch(callback, events);
-    };
+PromisePrototype.addBranch = function (key, events, callback) {
+    this[key] = callback || function (callback) {
+            return this.makeBranch(callback, events);
+        };
 };
 
-exported.addNode = function (key, callback) {
-    this[key] = callback;
+PromisePrototype.addNode = function (key, callback) {
+    this[key] = callback || function (callback) {
+            return this.makeTwig(callback);
+        };
 };
 
-exported.addEvent('resolve', ['resolve.start', 'resolve.finish'], ['resolve', 'reject', 'notify']);
-exported.addEvent('reject', ['reject.start', 'reject.finish'], ['resolve', 'reject', 'notify']);
-exported.addEvent('notify', ['notify'], []);
+Promise.addEvent('resolve', ['resolve.start', 'resolve.finish'], ['resolve', 'reject', 'notify']);
+Promise.addEvent('reject', ['reject.start', 'reject.finish'], ['resolve', 'reject', 'notify']);
+Promise.addEvent('notify', ['notify'], []);
 
-exported.addBranch('then', ['resolve.start']);
-exported.addBranch('catch', ['reject.start']);
-exported.addBranch('finally', ['resolve.finish', 'reject.finish']);
-exported.addBranch('notice', ['notify']);
+Promise.addBranch('then', ['resolve.start']);
+Promise.addBranch('catch', ['reject.start']);
+Promise.addBranch('finally', ['resolve.finish', 'reject.finish']);
+Promise.addBranch('notice', ['notify']);
 
-exported.addNode('also', function (callback) {
-    return this.makeNode(callback);
-});
+Promise.addNode('also');
 
-exported.addNode('with', function () {
+Promise.addNode('with', function () {
     var keys = arguments;
-    return this.makeNode(function (object) {
+    return this.makeTwig(function () {
+        var value = arguments;
+
         for (var i in keys) {
-            object = object[keys[i]];
+            value = value[keys[i]];
         }
-        return [object];
+
+        return [value];
     });
 });
 
-exported.addNode('expect', function (expected) {
-    return this.makeNode(function (actual) {
+PromiseTest.addNode('expect', function (expected) {
+    return this.makeTwig(function (actual) {
         expect(actual).toBe(expected);
-        return actual;
+        return [actual];
     });
 });
 
-exported.addNode('debug', function (message) {
-    return this.makeNode(function () {
+Promise.addNode('debug', function (message) {
+    return this.makeTwig(function () {
         console.log(message, '>>', arguments);
         return arguments;
     });
 });
 
-exported.addNode('stringify', function () {
-    return this.makeNode(function (value) {
+Promise.addNode('typeof', function () {
+    return this.makeTwig(function (a) {
+        return [typeof a];
+    });
+});
+
+Promise.addNode('stringify', function () {
+    return this.makeTwig(function (value) {
         return [JSON.stringify(value)];
     });
 });
