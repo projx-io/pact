@@ -10,21 +10,21 @@ exported.makeRoot = function () {
     promise.root = promise;
     promise.children = [];
     promise.branch = promise;
-    promise.types = true;
+    promise.events = true;
     return promise;
 };
 
-exported.makeBranch = function (callback, types) {
+exported.makeBranch = function (callback, events) {
     var promise = Object.create(this.branch);
     promise.callback = callback;
     promise.children = [];
     promise.branch = promise;
-    promise.types = types || [];
+    promise.events = events || [];
     this.children.push(promise);
     return promise;
 };
 
-exported.makeNode = function (callback, types) {
+exported.makeNode = function (callback, events) {
     var promise = Object.create(this);
     promise.callback = callback;
     promise.children = [];
@@ -33,21 +33,21 @@ exported.makeNode = function (callback, types) {
     return promise;
 };
 
-exported.run = function (type) {
-    if (this.types === true || this.types.indexOf(type) >= 0) {
+exported.run = function (event) {
+    if (this.events === true || this.events.indexOf(event) >= 0) {
         if (typeof this.callback === "function") {
             this.result = this.callback.apply(null, this.result);
         }
     }
 
     this.children.map(function (child) {
-        child.run(type);
+        child.run(event);
     }.bind(this));
 
     return this.result;
 };
 
-exported.addType = function (key, events, blocks) {
+exported.addEvent = function (key, events, blocks) {
     blocks = blocks || [];
 
     this[key] = function () {
@@ -65,9 +65,9 @@ exported.addType = function (key, events, blocks) {
     };
 };
 
-exported.addBranch = function (key, types) {
+exported.addBranch = function (key, events) {
     this[key] = function (callback) {
-        return this.makeBranch(callback, types);
+        return this.makeBranch(callback, events);
     };
 };
 
@@ -75,9 +75,9 @@ exported.addNode = function (key, callback) {
     this[key] = callback;
 };
 
-exported.addType('resolve', ['resolve.start', 'resolve.finish'], ['resolve', 'reject', 'notify']);
-exported.addType('reject', ['reject.start', 'reject.finish'], ['resolve', 'reject', 'notify']);
-exported.addType('notify', ['notify'], []);
+exported.addEvent('resolve', ['resolve.start', 'resolve.finish'], ['resolve', 'reject', 'notify']);
+exported.addEvent('reject', ['reject.start', 'reject.finish'], ['resolve', 'reject', 'notify']);
+exported.addEvent('notify', ['notify'], []);
 
 exported.addBranch('then', ['resolve.start']);
 exported.addBranch('catch', ['reject.start']);

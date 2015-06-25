@@ -29,8 +29,8 @@ describe(Class, function () {
         .then().with('a').stringify().expect(JSON.stringify(value.a))
         .then().with('a', 'b').stringify().expect(JSON.stringify(value.a.b))
         .then().with('a').with('b').with('c').expect(2)
-        .then().with('a').with('b').with('c').expect('this should fail.')
-        .then().with('a').with('b').with('c').expect('this should fail as well.')
+        //.then().with('a').with('b').with('c').expect('this should fail.')
+        //.then().with('a').with('b').with('c').expect('this should fail as well.')
     ;
 
     promise.notify('A');
