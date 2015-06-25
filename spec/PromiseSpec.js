@@ -66,12 +66,20 @@ describe('', function () {
     promise.finally(test('x'), 'on');
 
     setTimeout(function() {
-        promise.resolve('hey')
+        promise.reject('hey')
     }, 1000);
 
 
     setTimeout(function() {
-        promise.then(test('hahaha'), 'on');
+        promise.then(test('tx hahaha'), 'on');
+    }, 2000);
+
+    setTimeout(function() {
+        promise.catch(test('cx hahaha'), 'on');
+    }, 2000);
+
+    setTimeout(function() {
+        promise.finally(test('fx hahaha'), 'on');
     }, 2000);
 
 

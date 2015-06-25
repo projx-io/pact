@@ -47,8 +47,11 @@ var Promise = {
         var next = this.make(callback, key);
         this.thens.subscribe(next, 'resolve');
         this.catches.subscribe(next, 'reject');
-        if (this.status !== 0) {
+        if (this.status > 0) {
             next.resolve.apply(next, this.result);
+        }
+        if (this.status < 0) {
+            next.reject.apply(next, this.result);
         }
         return next;
     },
