@@ -94,14 +94,14 @@ PromisePrototype.traverse = function (event) {
     return this.result;
 };
 
-PromisePrototype.addEvent = function (key, events, blocks) {
+PromisePrototype.addEvent = function (name, keys, blocks) {
     blocks = blocks || [];
 
-    this[key] = function () {
+    this[name] = function () {
         this.root.result = arguments;
 
-        events.map(function (event) {
-            this.root.traverse(event);
+        keys.map(function (key) {
+            this.root.traverse(key);
         }.bind(this));
 
         blocks.map(function (block) {
@@ -118,7 +118,7 @@ PromisePrototype.addBranch = function (key, events, callback) {
         };
 };
 
-PromisePrototype.addNode = function (key, callback) {
+PromisePrototype.addTwig = function (key, callback) {
     this[key] = callback || function (callback) {
             return this.makeTwig(callback);
         };
@@ -133,9 +133,9 @@ Promise.addBranch('catch', ['reject.start']);
 Promise.addBranch('finally', ['resolve.finish', 'reject.finish']);
 Promise.addBranch('notice', ['notify']);
 
-Promise.addNode('also');
+Promise.addTwig('also');
 
-Promise.addNode('with', function () {
+Promise.addTwig('with', function () {
     var keys = arguments;
     return this.makeTwig(function () {
         var value = arguments;
@@ -148,27 +148,27 @@ Promise.addNode('with', function () {
     });
 });
 
-PromiseTest.addNode('expect', function (expected) {
+PromiseTest.addTwig('expect', function (expected) {
     return this.makeTwig(function (actual) {
         expect(actual).toBe(expected);
         return [actual];
     });
 });
 
-Promise.addNode('debug', function (message) {
+Promise.addTwig('debug', function (message) {
     return this.makeTwig(function () {
         console.log(message, '>>', arguments);
         return arguments;
     });
 });
 
-Promise.addNode('typeof', function () {
+Promise.addTwig('typeof', function () {
     return this.makeTwig(function (a) {
         return [typeof a];
     });
 });
 
-Promise.addNode('stringify', function () {
+Promise.addTwig('stringify', function () {
     return this.makeTwig(function (value) {
         return [JSON.stringify(value)];
     });
